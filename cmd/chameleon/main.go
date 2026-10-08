@@ -22,7 +22,7 @@ const (
  | |    |  __  | / /\ \ | |\/| |  __| | |    |  __|| |  | | . ' |
  | |____| |  | |/ ____ \| |  | | |____| |____| |___| |__| | |\  |
   \_____|_|  |_/_/    \_\_|  |_|______|______|______\____/|_| \_|
-        Enterprise-Grade Cyber Deception & Psychological Tarpit
+        Enterprise-Grade Cyber Deception & Psychological Tarpit by cys-dexter(AHMAD)(;
 `
 )
 
