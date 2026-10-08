@@ -1,0 +1,5 @@
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_START|Deception Node Contact Established|1|src=127.0.0.1 spt=0 dpt=9999 externalId=dec03b17cfd998cb msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_START|Deception Node Contact Established|1|src=127.0.0.1 spt=0 dpt=9999 externalId=981e0a74c79eedbc msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_END|Attacker Session Terminated|5|src=127.0.0.1 spt=0 dpt=0 externalId=dec03b17cfd998cb msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_START|Deception Node Contact Established|1|src=127.0.0.1 spt=0 dpt=9999 externalId=740ae387136b69e8 msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_END|Attacker Session Terminated|5|src=127.0.0.1 spt=0 dpt=0 externalId=981e0a74c79eedbc msg=

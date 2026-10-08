@@ -1,0 +1,52 @@
+{
+  "listeners": [
+    {
+      "name": "Decoy SSH Port",
+      "port": 2222,
+      "protocol": "ssh",
+      "banner": "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.6"
+    },
+    {
+      "name": "Decoy Telnet Port",
+      "port": 2323,
+      "protocol": "telnet",
+      "banner": "Ubuntu 22.04.4 LTS - System Authentication Gateway"
+    },
+    {
+      "name": "Interactive Decoy Shell",
+      "port": 9999,
+      "protocol": "interactive_shell",
+      "banner": "System Security Console v4.19 - Restricted Access"
+    }
+  ],
+  "tarpit": {
+    "enabled": true,
+    "min_delay_ms": 40,
+    "max_delay_ms": 160,
+    "progressive_delay": true,
+    "trap_loops_enabled": true,
+    "max_session_seconds": 1800
+  },
+  "deception": {
+    "trigger_on_connect": false,
+    "trigger_on_first_command": true,
+    "shock_phrase": "You're being watched — Tonight is the night",
+    "include_dynamic_trace": true,
+    "glitch_effect": true,
+    "fake_hostname": "core-auth-gateway-node01",
+    "fake_os": "Linux 5.15.0-89-generic #99-Ubuntu SMP x86_64",
+    "fake_user": "root"
+  },
+  "logging": {
+    "log_dir": "logs",
+    "session_tty_log": true,
+    "json_event_log": true
+  },
+  "ipc": {
+    "enabled": true,
+    "mode": "pipe",
+    "python_binary": "python3",
+    "python_script": "python_intel/intel_engine.py",
+    "socket_addr": "127.0.0.1:9099"
+  }
+}
