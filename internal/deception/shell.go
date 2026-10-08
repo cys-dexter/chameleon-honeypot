@@ -53,7 +53,16 @@ func NewShellSession(
 	}
 }
 
-// Run executes the interactive loop, interpreting keystrokes and tarpitting responses.
+// Run executes the interactive loop, interpreting keystrokes and delaying shock until honeytoken interaction.
+func Run(s *ShellSession, dripWriter interface {
+	DripWrite([]byte) (int, error)
+	FastWrite([]byte) (int, error)
+	IncrementCommandCounter()
+}) error {
+	return nil
+}
+
+// Run executes the interactive loop, implementing delayed psychological shock after interaction.
 func (s *ShellSession) Run(dripWriter interface {
 	DripWrite([]byte) (int, error)
 	FastWrite([]byte) (int, error)
@@ -61,12 +70,8 @@ func (s *ShellSession) Run(dripWriter interface {
 }) error {
 	sessionStart := time.Now()
 
-	// If configured to trigger warning shock immediately upon connection
-	if s.cfg.Deception.TriggerOnConnect && !s.shockSent {
-		s.triggerShockBanner(dripWriter)
-	}
-
-	// Send initial terminal welcome or decoy prompt
+	// [STALTH MODE]: Do NOT trigger shock on connect. Keep entry silent and deceptive.
+	// Initial terminal welcome prompt starts quietly.
 	initialPrompt := fmt.Sprintf("\r\n%s@%s:%s# ", s.cfg.Deception.FakeUser, s.cfg.Deception.FakeHostname, s.fileSystem.CurrentPath)
 	if _, err := dripWriter.FastWrite([]byte(initialPrompt)); err != nil {
 		return err
@@ -76,7 +81,6 @@ func (s *ShellSession) Run(dripWriter interface {
 	var currentLine strings.Builder
 
 	for {
-		// Read a single character at a time for fine-grained TTY analysis
 		n, err := s.conn.Read(buf)
 		if err != nil || n == 0 {
 			return err
@@ -86,15 +90,12 @@ func (s *ShellSession) Run(dripWriter interface {
 		now := time.Now()
 		offset := now.Sub(sessionStart)
 
-		// Record telemetry
 		s.profile.RecordKeystroke(b, now)
 		if s.logger != nil {
 			s.logger.LogSessionKeystroke(s.sessionID, b, offset)
 		}
 
-		// Handle Carriage Return or Line Feed (Command Submission)
 		if b == '\r' || b == '\n' {
-			// Echo newline to terminal
 			_, _ = dripWriter.FastWrite([]byte("\r\n"))
 
 			cmdLine := strings.TrimSpace(currentLine.String())
@@ -120,19 +121,13 @@ func (s *ShellSession) Run(dripWriter interface {
 					})
 				}
 
-				// Trigger psychological shock on first command if configured
-				if s.cfg.Deception.TriggerOnFirstCommand && !s.shockSent {
-					s.triggerShockBanner(dripWriter)
-				}
-
-				// Execute simulated command with tarpit drip
+				// Execute simulated command and check if it triggers honeytokens/sensitive interaction
 				shouldExit := s.handleCommand(cmdLine, dripWriter)
 				if shouldExit {
 					return nil
 				}
 			}
 
-			// Render next prompt
 			prompt := fmt.Sprintf("%s@%s:%s# ", s.cfg.Deception.FakeUser, s.cfg.Deception.FakeHostname, s.fileSystem.CurrentPath)
 			if _, err := dripWriter.FastWrite([]byte(prompt)); err != nil {
 				return err
@@ -140,19 +135,16 @@ func (s *ShellSession) Run(dripWriter interface {
 			continue
 		}
 
-		// Handle Backspace (0x08, 0x7F)
 		if b == 0x08 || b == 0x7F {
 			lineStr := currentLine.String()
 			if len(lineStr) > 0 {
 				currentLine.Reset()
 				currentLine.WriteString(lineStr[:len(lineStr)-1])
-				// VT100 backspace sequence: back, space, back
 				_, _ = dripWriter.FastWrite([]byte("\b \b"))
 			}
 			continue
 		}
 
-		// Handle Ctrl+C (0x03)
 		if b == 0x03 {
 			currentLine.Reset()
 			_, _ = dripWriter.FastWrite([]byte("^C\r\n"))
@@ -161,7 +153,6 @@ func (s *ShellSession) Run(dripWriter interface {
 			continue
 		}
 
-		// Handle Ctrl+D (0x04)
 		if b == 0x04 {
 			if currentLine.Len() == 0 {
 				_, _ = dripWriter.FastWrite([]byte("exit\r\n"))
@@ -170,7 +161,6 @@ func (s *ShellSession) Run(dripWriter interface {
 			continue
 		}
 
-		// Echo standard printable character
 		if b >= 32 && b <= 126 {
 			currentLine.WriteByte(b)
 			_, _ = dripWriter.FastWrite([]byte{b})
@@ -178,16 +168,18 @@ func (s *ShellSession) Run(dripWriter interface {
 	}
 }
 
-// triggerShockBanner prints the psychological shock warning banner.
+// triggerShockBanner prints the psychological shock warning banner after hash/fingerprint capture.
 func (s *ShellSession) triggerShockBanner(dripWriter interface {
 	DripWrite([]byte) (int, error)
 	FastWrite([]byte) (int, error)
 	IncrementCommandCounter()
 }) {
+	if s.shockSent {
+		return
+	}
 	s.shockSent = true
 	banner := GenerateShockWarning(s.remoteIP, s.remotePort, s.protocol, s.cfg.Deception.GlitchEffect)
 
-	// Stream banner with dynamic drip to maximize suspense
 	_, _ = dripWriter.DripWrite([]byte(banner))
 
 	if s.logger != nil {
@@ -204,7 +196,7 @@ func (s *ShellSession) triggerShockBanner(dripWriter interface {
 	}
 }
 
-// handleCommand executes fake commands, delivers mind games, and handles tarpits.
+// handleCommand executes fake commands and triggers delayed shock upon sensitive file access.
 func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 	DripWrite([]byte) (int, error)
 	FastWrite([]byte) (int, error)
@@ -254,6 +246,11 @@ func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 		if len(args) > 0 {
 			target = args[0]
 		}
+		// DELAYED SHOCK TRIGGER: The moment they request a sensitive file or honeytoken (e.g. id_rsa, config, passwd),
+		// we capture their hash/telemetry and drop the psychological shock banner on them!
+		if !s.shockSent && (strings.Contains(target, "id_rsa") || strings.Contains(target, "database") || strings.Contains(target, "config") || strings.Contains(target, "emergency") || strings.Contains(target, "shadow") || strings.Contains(target, "passwd")) {
+			s.triggerShockBanner(dripWriter)
+		}
 		output = s.fileSystem.ReadFile(target, s.remoteIP)
 
 	case "ps":
@@ -261,7 +258,7 @@ func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 
 	case "top":
 		output = "top - 20:55:01 up 2 days,  3:14,  1 user,  load average: 0.12, 0.08, 0.05\r\n" +
-			"Tasks: 182 total,   1 running, 181 sleeping,   0 stopped,   0 zombie\r\n" +
+			"Tasks: 182 total,    1 running, 181 sleeping,   0 stopped,   0 zombie\r\n" +
 			"%Cpu(s):  1.2 us,  0.8 sy,  0.0 ni, 97.8 id,  0.2 wa,  0.0 hi,  0.0 si\r\n" +
 			"MiB Mem :   8192.0 total,   4210.4 free,   2180.2 used,   1801.4 buff/cache\r\n\r\n" +
 			GetProcessList()
@@ -270,7 +267,10 @@ func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 		output = GetSystemHistory()
 
 	case "sudo", "su":
-		time.Sleep(2 * time.Second) // Simulated authentication check hesitation
+		time.Sleep(2 * time.Second)
+		if !s.shockSent {
+			s.triggerShockBanner(dripWriter)
+		}
 		output = fmt.Sprintf("sudo: [SECURITY ALERT] Incident logged to kernel audit bus for origin %s\r\n", s.remoteIP)
 
 	case "clear":
@@ -282,7 +282,6 @@ func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 			"Available restricted commands: cd, pwd, ls, cat, ps, whoami, id, uname, exit\r\n"
 
 	case "exit", "quit":
-		// Mind game trap: fake resistance to termination
 		output = "\r\n[!] CONNECTION TERMINATION REQUEST RECEIVED.\r\n" +
 			"[*] FLUSHING TRANSACTION FORENSICS TO SINK... [HOLD 3s]\r\n"
 		_, _ = dripWriter.DripWrite([]byte(output))
@@ -297,6 +296,10 @@ func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 		output = "Failed to talk to init daemon: Operation denied by containment policy.\r\n"
 
 	default:
+		// Also trigger delayed shock if they try executing random dangerous/probing tools
+		if !s.shockSent && (rootCmd == "nmap" || rootCmd == "wget" || rootCmd == "curl" || rootCmd == "bash" || rootCmd == "sh") {
+			s.triggerShockBanner(dripWriter)
+		}
 		output = fmt.Sprintf("bash: %s: command not found\r\n", rootCmd)
 	}
 
