@@ -53,7 +53,7 @@ func NewShellSession(
 	}
 }
 
-// Run executes the interactive loop.
+// Run dummy interface compliance.
 func Run(s *ShellSession, dripWriter interface {
 	DripWrite([]byte) (int, error)
 	FastWrite([]byte) (int, error)
@@ -62,7 +62,7 @@ func Run(s *ShellSession, dripWriter interface {
 	return nil
 }
 
-// Run executes the interactive loop with clean, bug-free prompt handling.
+// Run executes the clean, stable terminal loop with Tab auto-completion and zero duplication.
 func (s *ShellSession) Run(dripWriter interface {
 	DripWrite([]byte) (int, error)
 	FastWrite([]byte) (int, error)
@@ -137,7 +137,26 @@ func (s *ShellSession) Run(dripWriter interface {
 			continue
 		}
 
-		// Handle Backspace (Ctrl+H or DEL)
+		// Handle Tab completion (Auto-complete simulation for filenames)
+		if b == 0x09 {
+			lineStr := currentLine.String()
+			if strings.HasPrefix(lineStr, "cat d") {
+				currentLine.Reset()
+				currentLine.WriteString("cat database_production.conf")
+				_, _ = dripWriter.FastWrite([]byte("atabase_production.conf"))
+			} else if strings.HasPrefix(lineStr, "cat s") {
+				currentLine.Reset()
+				currentLine.WriteString("cat secrets_vault")
+				_, _ = dripWriter.FastWrite([]byte("ecrets_vault"))
+			} else if strings.HasPrefix(lineStr, "cat e") {
+				currentLine.Reset()
+				currentLine.WriteString("cat emergency_access.txt")
+				_, _ = dripWriter.FastWrite([]byte("mergency_access.txt"))
+			}
+			continue
+		}
+
+		// Handle Backspace
 		if b == 0x08 || b == 0x7F {
 			lineStr := currentLine.String()
 			if len(lineStr) > 0 {
@@ -157,7 +176,7 @@ func (s *ShellSession) Run(dripWriter interface {
 			continue
 		}
 
-		// Handle Ctrl+D (EOF / Exit)
+		// Handle Ctrl+D
 		if b == 0x04 {
 			if currentLine.Len() == 0 {
 				_, _ = dripWriter.FastWrite([]byte("exit\r\n"))
@@ -166,7 +185,7 @@ func (s *ShellSession) Run(dripWriter interface {
 			continue
 		}
 
-		// Normal printable characters
+		// Normal printable characters (Echo once cleanly)
 		if b >= 32 && b <= 126 {
 			currentLine.WriteByte(b)
 			_, _ = dripWriter.FastWrite([]byte{b})
@@ -174,7 +193,7 @@ func (s *ShellSession) Run(dripWriter interface {
 	}
 }
 
-// triggerShockBanner prints the psychological shock warning banner instantly.
+// triggerShockBanner prints the precise, clean "Tonight is the night" psychological shock banner with real IP.
 func (s *ShellSession) triggerShockBanner(dripWriter interface {
 	DripWrite([]byte) (int, error)
 	FastWrite([]byte) (int, error)
@@ -185,9 +204,20 @@ func (s *ShellSession) triggerShockBanner(dripWriter interface {
 	}
 	s.shockSent = true
 
-	fmt.Printf("\033[31m[💥 PSYCHOLOGICAL SHOCK TRIGGERED] Attacker %s tripped the deception trap!\033[0m\n", s.remoteIP)
+	fmt.Printf("\033[31m[💥 PSYCHOLOGICAL SHOCK TRIGGERED] Attacker IP: %s tripped the trap!\033[0m\n", s.remoteIP)
 
-	banner := GenerateShockWarning(s.remoteIP, s.remotePort, s.protocol, s.cfg.Deception.GlitchEffect)
+	banner := fmt.Sprintf("\r\n"+
+		"================================================================================\r\n"+
+		"[!] CRITICAL SECURITY WARNING: INTRUDER IDENTIFIED\r\n"+
+		"================================================================================\r\n"+
+		"[+] TARGET IP ADDRESS : %s\r\n"+
+		"[+] CONNECTION PORT   : %d\r\n"+
+		"[+] STATUS            : ISOLATED & RECORDED IN REAL-TIME\r\n"+
+		"--------------------------------------------------------------------------------\r\n"+
+		">>> You're being watched — Tonight is the night <<<\r\n"+
+		"================================================================================\r\n\r\n",
+		s.remoteIP, s.remotePort)
+
 	_, _ = dripWriter.FastWrite([]byte(banner))
 
 	if s.logger != nil {
@@ -198,13 +228,13 @@ func (s *ShellSession) triggerShockBanner(dripWriter interface {
 			RemotePort: s.remotePort,
 			LocalPort:  s.localPort,
 			Protocol:   s.protocol,
-			Data:       s.cfg.Deception.ShockPhrase,
+			Data:       "Tonight is the night",
 			Profile:    s.profile.Snapshot(),
 		})
 	}
 }
 
-// handleCommand executes commands instantly without output duplication.
+// handleCommand executes commands with precise honeytoken validation.
 func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 	DripWrite([]byte) (int, error)
 	FastWrite([]byte) (int, error)
@@ -254,7 +284,11 @@ func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 		if len(args) > 0 {
 			target = args[0]
 		}
-		if !s.shockSent {
+		
+		// البانر لا يفجر إلا إذا كتب اسم الملف الحساس كاملاً وصحيحاً
+		isSensitiveHoneytoken := target == "id_rsa" || target == "database_production.conf" || target == "emergency_access.txt" || strings.Contains(target, "shadow") || strings.Contains(target, "passwd")
+		
+		if !s.shockSent && isSensitiveHoneytoken {
 			s.triggerShockBanner(dripWriter)
 		}
 		output = s.fileSystem.ReadFile(target, s.remoteIP)
@@ -301,9 +335,6 @@ func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 		output = "Failed to talk to init daemon: Operation denied by containment policy.\r\n"
 
 	default:
-		if !s.shockSent {
-			s.triggerShockBanner(dripWriter)
-		}
 		output = fmt.Sprintf("bash: %s: command not found\r\n", rootCmd)
 	}
 
