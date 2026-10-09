@@ -53,7 +53,7 @@ func NewShellSession(
 	}
 }
 
-// Run executes the interactive loop, interpreting keystrokes and delaying shock until honeytoken interaction.
+// Run executes the interactive loop, interpreting keystrokes and ensuring instant snappy responses.
 func Run(s *ShellSession, dripWriter interface {
 	DripWrite([]byte) (int, error)
 	FastWrite([]byte) (int, error)
@@ -62,7 +62,7 @@ func Run(s *ShellSession, dripWriter interface {
 	return nil
 }
 
-// Run executes the interactive loop, implementing delayed psychological shock after interaction.
+// Run executes the interactive loop with instant FastWrite responsiveness.
 func (s *ShellSession) Run(dripWriter interface {
 	DripWrite([]byte) (int, error)
 	FastWrite([]byte) (int, error)
@@ -122,7 +122,7 @@ func (s *ShellSession) Run(dripWriter interface {
 					})
 				}
 
-				// Execute simulated command and check if it triggers honeytokens/sensitive interaction
+				// Execute simulated command
 				shouldExit := s.handleCommand(cmdLine, dripWriter)
 				if shouldExit {
 					return nil
@@ -169,7 +169,7 @@ func (s *ShellSession) Run(dripWriter interface {
 	}
 }
 
-// triggerShockBanner prints the psychological shock warning banner after hash/fingerprint capture.
+// triggerShockBanner prints the psychological shock warning banner instantly using FastWrite.
 func (s *ShellSession) triggerShockBanner(dripWriter interface {
 	DripWrite([]byte) (int, error)
 	FastWrite([]byte) (int, error)
@@ -181,11 +181,12 @@ func (s *ShellSession) triggerShockBanner(dripWriter interface {
 	s.shockSent = true
 
 	// === [LIVE SOC TERMINAL 1: SHOCK TRIGGER ALERT] ===
-	fmt.Printf("\033[31m[💥 PSYCHOLOGICAL SHOCK TRIGGERED] Attacker %s tripped a forensic honeytoken!\033[0m\n", s.remoteIP)
+	fmt.Printf("\033[31m[💥 PSYCHOLOGICAL SHOCK TRIGGERED] Attacker %s tripped the deception trap!\033[0m\n", s.remoteIP)
 
 	banner := GenerateShockWarning(s.remoteIP, s.remotePort, s.protocol, s.cfg.Deception.GlitchEffect)
 
-	_, _ = dripWriter.DripWrite([]byte(banner))
+	// استخدام FastWrite لطباعة البانر فوراً وبدون أي تقطيع أو تأخير
+	_, _ = dripWriter.FastWrite([]byte(banner))
 
 	if s.logger != nil {
 		_ = s.logger.LogEvent(profiler.SessionLogEntry{
@@ -201,7 +202,7 @@ func (s *ShellSession) triggerShockBanner(dripWriter interface {
 	}
 }
 
-// handleCommand executes fake commands and triggers instant shock upon any file access or sensitive inspection.
+// handleCommand executes commands instantly with FastWrite and triggers shock on interaction.
 func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 	DripWrite([]byte) (int, error)
 	FastWrite([]byte) (int, error)
@@ -244,10 +245,6 @@ func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 			target = args[0]
 		}
 		s.fileSystem.HandleCD(target)
-		// تفعيل بانر "Tonight is the night" فوراً بمجرد محاولة التنقل بين المجلدات الحساسة
-		if !s.shockSent {
-			s.triggerShockBanner(dripWriter)
-		}
 		output = ""
 
 	case "cat", "type", "more", "less", "tail", "head":
@@ -255,7 +252,7 @@ func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 		if len(args) > 0 {
 			target = args[0]
 		}
-		// أي محاولة قراءة لأي ملف (مثل id_rsa أو غيره) تفجر بانر الصدمة النفسية فوراً وتلتقط الآي بي
+		// تفعيل بانر الصدمة الفوري عند محاولة قراءة أي ملف
 		if !s.shockSent {
 			s.triggerShockBanner(dripWriter)
 		}
@@ -275,7 +272,6 @@ func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 		output = GetSystemHistory()
 
 	case "sudo", "su":
-		time.Sleep(2 * time.Second)
 		if !s.shockSent {
 			s.triggerShockBanner(dripWriter)
 		}
@@ -291,9 +287,9 @@ func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 
 	case "exit", "quit":
 		output = "\r\n[!] CONNECTION TERMINATION REQUEST RECEIVED.\r\n" +
-			"[*] FLUSHING TRANSACTION FORENSICS TO SINK... [HOLD 3s]\r\n"
-		_, _ = dripWriter.DripWrite([]byte(output))
-		time.Sleep(3 * time.Second)
+			"[*] FLUSHING TRANSACTION FORENSICS TO SINK... [HOLD 1s]\r\n"
+		_, _ = dripWriter.FastWrite([]byte(output))
+		time.Sleep(1 * time.Second)
 		exitSession = true
 		return exitSession
 
@@ -304,7 +300,7 @@ func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 		output = "Failed to talk to init daemon: Operation denied by containment policy.\r\n"
 
 	default:
-		// أي أمر استطلاع أو أدوات فحص تفجر البانر مباشرة
+		// أي أمر غير معروف أو محاولة استطلاع تفجر البانر فوراً
 		if !s.shockSent {
 			s.triggerShockBanner(dripWriter)
 		}
@@ -312,7 +308,8 @@ func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 	}
 
 	if output != "" {
-		_, _ = dripWriter.DripWrite([]byte(output))
+		// استخدام FastWrite لإرسال كامل الناتج دفعة واحدة وبسرعة فائقة بدون تقطيع
+		_, _ = dripWriter.FastWrite([]byte(output))
 	}
 
 	return exitSession
