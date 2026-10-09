@@ -3,3 +3,20 @@ CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_START|Deception Node Cont
 CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_END|Attacker Session Terminated|5|src=127.0.0.1 spt=0 dpt=0 externalId=dec03b17cfd998cb msg=
 CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_START|Deception Node Contact Established|1|src=127.0.0.1 spt=0 dpt=9999 externalId=740ae387136b69e8 msg=
 CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_END|Attacker Session Terminated|5|src=127.0.0.1 spt=0 dpt=0 externalId=981e0a74c79eedbc msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_START|Deception Node Contact Established|1|src=127.0.0.1 spt=0 dpt=9999 externalId=6d3f221f9e7d6e6d msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_START|Deception Node Contact Established|1|src=127.0.0.1 spt=0 dpt=9999 externalId=79ab38bc7614b65d msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_END|Attacker Session Terminated|5|src=127.0.0.1 spt=0 dpt=0 externalId=6d3f221f9e7d6e6d msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_START|Deception Node Contact Established|1|src=127.0.0.1 spt=0 dpt=9999 externalId=3c17ac1fea97837f msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_END|Attacker Session Terminated|5|src=127.0.0.1 spt=0 dpt=0 externalId=79ab38bc7614b65d msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_END|Attacker Session Terminated|5|src=127.0.0.1 spt=0 dpt=0 externalId=3c17ac1fea97837f msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_START|Deception Node Contact Established|1|src=127.0.0.1 spt=0 dpt=9999 externalId=a54f4cf257ae2d65 msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_START|Deception Node Contact Established|1|src=127.0.0.1 spt=0 dpt=9999 externalId=4587668860654419 msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_END|Attacker Session Terminated|5|src=127.0.0.1 spt=0 dpt=0 externalId=a54f4cf257ae2d65 msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_START|Deception Node Contact Established|1|src=127.0.0.1 spt=0 dpt=9999 externalId=492a9c35e2202772 msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_END|Attacker Session Terminated|5|src=127.0.0.1 spt=0 dpt=0 externalId=4587668860654419 msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_START|Deception Node Contact Established|1|src=127.0.0.1 spt=0 dpt=9999 externalId=399497b0d33f84e7 msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_START|Deception Node Contact Established|1|src=127.0.0.1 spt=0 dpt=9999 externalId=5085e3da52d52af2 msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_END|Attacker Session Terminated|5|src=127.0.0.1 spt=0 dpt=0 externalId=399497b0d33f84e7 msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_START|Deception Node Contact Established|1|src=127.0.0.1 spt=0 dpt=9999 externalId=7b8f9c65cbf42e94 msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_END|Attacker Session Terminated|5|src=127.0.0.1 spt=0 dpt=0 externalId=5085e3da52d52af2 msg=
+CEF:0|Chameleon-Security|DeceptionEngine|2.4.0|SESSION_END|Attacker Session Terminated|5|src=127.0.0.1 spt=0 dpt=0 externalId=7b8f9c65cbf42e94 msg=
