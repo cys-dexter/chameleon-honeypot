@@ -140,16 +140,26 @@ func (dl *DecoyListener) handleConnection(conn net.Conn) {
 	log.Printf("[INCOMING] New connection on port %d from %s:%d [Session: %s]",
 		dl.cfg.Port, session.RemoteIP, session.RemotePort, session.ID)
 
+	// === [LIVE SOC TERMINAL 1 MONITORING] ===
+	fmt.Printf("\033[36m[+] ============================================================================\033[0m\n")
+	fmt.Printf("\033[36m[+] 🚨 LIVE INTRUSION DETECTED & PROFILED (Port: %d)\033[0m\n", dl.cfg.Port)
+	fmt.Printf("\033[36m[+] ============================================================================\033[0m\n")
+	fmt.Printf("    ├── Session ID       : %s\n", session.ID)
+	fmt.Printf("    ├── Attacker IP      : %s:%d\n", session.RemoteIP, session.RemotePort)
+	fmt.Printf("    ├── Protocol Target  : %s\n", dl.cfg.Protocol)
+	fmt.Printf("    └── Initial Fingerprint: %s\n", session.Profile.Snapshot().ClientType)
+	fmt.Printf("\033[36m--------------------------------------------------------------------------------\033[0m\n")
+
 	// Log connection event
 	if dl.logger != nil {
 		_ = dl.logger.LogEvent(profiler.SessionLogEntry{
-			SessionID:  session.ID,
-			EventType:  "CONNECT",
-			RemoteIP:   session.RemoteIP,
-			RemotePort: session.RemotePort,
-			LocalPort:  session.LocalPort,
-			Protocol:   session.Protocol,
-			Profile:    session.Profile.Snapshot(),
+			SessionID:   session.ID,
+			EventType:   "CONNECT",
+			RemoteIP:    session.RemoteIP,
+			RemotePort:  session.RemotePort,
+			LocalPort:   session.LocalPort,
+			Protocol:    session.Protocol,
+			Profile:     session.Profile.Snapshot(),
 		})
 	}
 
