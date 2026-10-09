@@ -70,7 +70,7 @@ func (s *ShellSession) Run(dripWriter interface {
 }) error {
 	sessionStart := time.Now()
 
-	// [STALTH MODE]: Do NOT trigger shock on connect. Keep entry silent and deceptive.
+	// [STEALTH MODE]: Do NOT trigger shock on connect. Keep entry silent and deceptive.
 	// Initial terminal welcome prompt starts quietly.
 	initialPrompt := fmt.Sprintf("\r\n%s@%s:%s# ", s.cfg.Deception.FakeUser, s.cfg.Deception.FakeHostname, s.fileSystem.CurrentPath)
 	if _, err := dripWriter.FastWrite([]byte(initialPrompt)); err != nil {
@@ -105,6 +105,9 @@ func (s *ShellSession) Run(dripWriter interface {
 				s.commandCount++
 				dripWriter.IncrementCommandCounter()
 				s.profile.RecordCommand(cmdLine)
+
+				// === [LIVE SOC TERMINAL 1: REAL-TIME COMMAND STREAM] ===
+				fmt.Printf("\033[33m[⚡ LIVE COMMAND] Session [%s...] -> IP: %s | Cmd: \033[1m%s\033[0m\n", s.sessionID[:8], s.remoteIP, cmdLine)
 
 				if s.logger != nil {
 					s.logger.LogSessionCommand(s.sessionID, cmdLine, offset)
@@ -178,6 +181,10 @@ func (s *ShellSession) triggerShockBanner(dripWriter interface {
 		return
 	}
 	s.shockSent = true
+
+	// === [LIVE SOC TERMINAL 1: SHOCK TRIGGER ALERT] ===
+	fmt.Printf("\033[31m[💥 PSYCHOLOGICAL SHOCK TRIGGERED] Attacker %s tripped a forensic honeytoken!\033[0m\n", s.remoteIP)
+
 	banner := GenerateShockWarning(s.remoteIP, s.remotePort, s.protocol, s.cfg.Deception.GlitchEffect)
 
 	_, _ = dripWriter.DripWrite([]byte(banner))
