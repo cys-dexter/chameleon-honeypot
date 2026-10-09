@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"path"
 	"strings"
 	"time"
 
@@ -18,7 +19,8 @@ type terminalWriter interface {
 	IncrementCommandCounter()
 }
 
-// ShellSession manages an isolated, simulated terminal session.
+// ShellSession is an isolated simulated shell for honeypot sessions.
+// Commands are simulated; they are never executed by the host operating system.
 type ShellSession struct {
 	conn         net.Conn
 	sessionID    string
@@ -60,22 +62,57 @@ func NewShellSession(
 }
 
 func (s *ShellSession) prompt() string {
-	return fmt.Sprintf("%s@%s:%s# ",
-		s.cfg.Deception.FakeUser,
-		s.cfg.Deception.FakeHostname,
-		s.fileSystem.CurrentPath,
-	)
+	user := s.cfg.Deception.FakeUser
+	host := s.cfg.Deception.FakeHostname
+	currentPath := s.fileSystem.CurrentPath
+
+	if user == "" {
+		user = "root"
+	}
+	if host == "" {
+		host = "core-auth-gateway-node01"
+	}
+	if currentPath == "" {
+		currentPath = "/root"
+	}
+
+	return fmt.Sprintf("%s@%s:%s# ", user, host, currentPath)
 }
 
-func (s *ShellSession) write(w terminalWriter, text string) error {
-	_, err := w.FastWrite([]byte(text))
+func (s *ShellSession) write(w terminalWriter, value string) error {
+	_, err := w.FastWrite([]byte(value))
 	return err
 }
 
-// Run executes the simulated terminal loop.
+func (s *ShellSession) logEvent(eventType, data string, elapsed time.Duration) {
+	if s.logger == nil {
+		return
+	}
+
+	event := profiler.SessionLogEntry{
+		SessionID:   s.sessionID,
+		EventType:   eventType,
+		RemoteIP:    s.remoteIP,
+		RemotePort:  s.remotePort,
+		LocalPort:   s.localPort,
+		Protocol:    s.protocol,
+		Data:        data,
+		DurationSec: elapsed.Seconds(),
+	}
+	if s.profile != nil {
+		event.Profile = s.profile.Snapshot()
+	}
+	_ = s.logger.LogEvent(event)
+}
+
+// Run processes a simulated interactive shell session.
+//
+// This implementation echoes printable characters and edits the input line
+// on the server side. The network client must send input interactively for
+// character-by-character editing and Tab completion to work properly.
 func (s *ShellSession) Run(w terminalWriter) error {
 	if s == nil || s.conn == nil || s.cfg == nil || s.fileSystem == nil {
-		return fmt.Errorf("invalid shell session: required dependency is nil")
+		return fmt.Errorf("invalid shell session: missing required dependency")
 	}
 	if w == nil {
 		return fmt.Errorf("invalid shell session: terminal writer is nil")
@@ -104,16 +141,16 @@ func (s *ShellSession) Run(w terminalWriter) error {
 
 		b := reader[0]
 		now := time.Now()
-		offset := now.Sub(start)
+		elapsed := now.Sub(start)
 
 		if s.profile != nil {
 			s.profile.RecordKeystroke(b, now)
 		}
 		if s.logger != nil {
-			s.logger.LogSessionKeystroke(s.sessionID, b, offset)
+			s.logger.LogSessionKeystroke(s.sessionID, b, elapsed)
 		}
 
-		// Treat CRLF as a single Enter key.
+		// Clients commonly send CRLF. Process it as a single Enter key.
 		if b == '\n' && lastWasCR {
 			lastWasCR = false
 			continue
@@ -136,35 +173,19 @@ func (s *ShellSession) Run(w terminalWriter) error {
 				if s.profile != nil {
 					s.profile.RecordCommand(cmd)
 				}
-
-				id := s.sessionID
-				if len(id) > 8 {
-					id = id[:8]
+				if s.logger != nil {
+					s.logger.LogSessionCommand(s.sessionID, cmd, elapsed)
 				}
 
+				label := s.sessionID
+				if len(label) > 8 {
+					label = label[:8]
+				}
 				fmt.Printf(
 					"\033[33m[LIVE COMMAND] Session [%s] IP: %s | Cmd: %s\033[0m\n",
-					id, s.remoteIP, cmd,
+					label, s.remoteIP, cmd,
 				)
-
-				if s.logger != nil {
-					s.logger.LogSessionCommand(s.sessionID, cmd, offset)
-
-					event := profiler.SessionLogEntry{
-						SessionID:   s.sessionID,
-						EventType:   "COMMAND",
-						RemoteIP:    s.remoteIP,
-						RemotePort:  s.remotePort,
-						LocalPort:   s.localPort,
-						Protocol:    s.protocol,
-						Data:        cmd,
-						DurationSec: offset.Seconds(),
-					}
-					if s.profile != nil {
-						event.Profile = s.profile.Snapshot()
-					}
-					_ = s.logger.LogEvent(event)
-				}
+				s.logEvent("COMMAND", cmd, elapsed)
 
 				if s.handleCommand(cmd, w) {
 					return nil
@@ -183,7 +204,8 @@ func (s *ShellSession) Run(w terminalWriter) error {
 
 		case b == 0x04: // Ctrl+D
 			if line.Len() == 0 {
-				return s.write(w, "exit\r\n")
+				_ = s.write(w, "exit\r\n")
+				return nil
 			}
 
 		case b == 0x08 || b == 0x7f: // Backspace
@@ -210,7 +232,6 @@ func (s *ShellSession) Run(w terminalWriter) error {
 	}
 }
 
-// completeFilename performs basic completion for simulated filenames.
 func (s *ShellSession) completeFilename(line *strings.Builder, w terminalWriter) error {
 	current := line.String()
 	fields := strings.Fields(current)
@@ -220,6 +241,7 @@ func (s *ShellSession) completeFilename(line *strings.Builder, w terminalWriter)
 	}
 
 	candidates := []string{
+		".bash_history",
 		"database_production.conf",
 		"emergency_access.txt",
 		"secrets_vault",
@@ -227,83 +249,64 @@ func (s *ShellSession) completeFilename(line *strings.Builder, w terminalWriter)
 
 	prefix := fields[1]
 	matches := make([]string, 0, len(candidates))
-
-	for _, candidate := range candidates {
-		if strings.HasPrefix(candidate, prefix) {
-			matches = append(matches, candidate)
+	for _, name := range candidates {
+		if strings.HasPrefix(name, prefix) {
+			matches = append(matches, name)
 		}
 	}
 
-	if len(matches) == 1 {
-		completed := "cat " + matches[0]
-		suffix := strings.TrimPrefix(completed, current)
-
-		if err := s.write(w, suffix); err != nil {
-			return err
-		}
-
-		line.Reset()
-		line.WriteString(completed)
+	if len(matches) == 0 {
 		return nil
 	}
 
 	if len(matches) > 1 {
-		return s.write(w, "\r\n"+strings.Join(matches, "  ")+"\r\n"+s.prompt()+current)
+		if err := s.write(w, "\r\n"+strings.Join(matches, "  ")+"\r\n"+s.prompt()+current); err != nil {
+			return err
+		}
+		return nil
 	}
 
+	completed := "cat " + matches[0]
+	if err := s.write(w, "\r\033[2K"+s.prompt()+completed); err != nil {
+		return err
+	}
+
+	line.Reset()
+	line.WriteString(completed)
 	return nil
 }
 
-// triggerShockBanner emits a red warning for a simulated honeytoken event.
 func (s *ShellSession) triggerShockBanner(w terminalWriter) {
 	if s.shockSent {
 		return
 	}
 	s.shockSent = true
 
-	fmt.Printf(
-		"\033[31m[PSYCHOLOGICAL SHOCK] Remote IP: %s | Session: %s\033[0m\n",
-		s.remoteIP, s.sessionID,
-	)
-
 	const red = "\033[1;31m"
 	const reset = "\033[0m"
 
 	banner := fmt.Sprintf(
 		"\r\n%s"+
-			"================================================================================\r\n"+
-			"[!] CRITICAL SECURITY WARNING: INTRUDER IDENTIFIED\r\n"+
-			"================================================================================\r\n"+
-			"[+] TARGET IP ADDRESS : %s\r\n"+
-			"[+] CONNECTION PORT   : %d\r\n"+
-			"[+] STATUS            : ACTIVITY RECORDED\r\n"+
-			"--------------------------------------------------------------------------------\r\n"+
-			">>> YOU'RE BEING WATCHED - TONIGHT IS THE NIGHT <<<\r\n"+
-			"================================================================================\r\n"+
-			"%s\r\n",
-		red, s.remoteIP, s.remotePort, reset,
+			"============================================================================\r\n"+
+			"  SECURITY EVENT: SENSITIVE HONEYTOKEN ACCESSED\r\n"+
+			"============================================================================\r\n"+
+			"  Source address : %s\r\n"+
+			"  Source port    : %d\r\n"+
+			"  Session        : %s\r\n"+
+			"  Status         : Activity recorded\r\n"+
+			"============================================================================\r\n%s\r\n",
+		red,
+		s.remoteIP,
+		s.remotePort,
+		s.sessionID,
+		reset,
 	)
 
-	_, _ = w.FastWrite([]byte(banner))
-
-	if s.logger != nil {
-		event := profiler.SessionLogEntry{
-			SessionID:  s.sessionID,
-			EventType:  "SHOCK_BANNER",
-			RemoteIP:   s.remoteIP,
-			RemotePort: s.remotePort,
-			LocalPort:  s.localPort,
-			Protocol:   s.protocol,
-			Data:       "Simulated honeytoken access detected",
-		}
-		if s.profile != nil {
-			event.Profile = s.profile.Snapshot()
-		}
-		_ = s.logger.LogEvent(event)
-	}
+	_ = s.write(w, banner)
+	fmt.Printf("[SECURITY ALERT] Simulated honeytoken accessed from %s\n", s.remoteIP)
+	s.logEvent("SHOCK_BANNER", "Simulated honeytoken access detected", 0)
 }
 
-// handleCommand processes commands inside the simulated filesystem only.
 func (s *ShellSession) handleCommand(cmd string, w terminalWriter) bool {
 	parts := strings.Fields(cmd)
 	if len(parts) == 0 {
@@ -316,32 +319,26 @@ func (s *ShellSession) handleCommand(cmd string, w terminalWriter) bool {
 
 	switch command {
 	case "whoami":
-		output = fmt.Sprintf("%s\r\n", s.cfg.Deception.FakeUser)
+		output = s.cfg.Deception.FakeUser + "\r\n"
 
 	case "id":
 		user := s.cfg.Deception.FakeUser
-		output = fmt.Sprintf(
-			"uid=0(%s) gid=0(%s) groups=0(%s)\r\n",
-			user, user, user,
-		)
+		output = fmt.Sprintf("uid=0(%s) gid=0(%s) groups=0(%s)\r\n", user, user, user)
 
 	case "pwd":
 		output = s.fileSystem.CurrentPath + "\r\n"
 
 	case "uname":
-		output = GetUnameOutput(
-			s.cfg.Deception.FakeHostname,
-			s.cfg.Deception.FakeOS,
-		)
+		output = GetUnameOutput(s.cfg.Deception.FakeHostname, s.cfg.Deception.FakeOS)
 
 	case "hostname":
 		output = s.cfg.Deception.FakeHostname + "\r\n"
 
 	case "ls", "dir":
-		output = s.fileSystem.ListDirectory()
+		output = s.listDirectory(args)
 
 	case "cd":
-		target := ""
+		target := "/root"
 		if len(args) > 0 {
 			target = args[0]
 		}
@@ -353,19 +350,12 @@ func (s *ShellSession) handleCommand(cmd string, w terminalWriter) bool {
 			break
 		}
 
-		target := args[0]
-		base := target
-		if index := strings.LastIndex(target, "/"); index >= 0 {
-			base = target[index+1:]
-		}
-
+		target := path.Clean(args[0])
+		base := path.Base(target)
 		switch base {
-		case "id_rsa", "database_production.conf", "emergency_access.txt",
-			"shadow", "passwd":
+		case "id_rsa", "database_production.conf", "emergency_access.txt", "shadow", "passwd":
 			s.triggerShockBanner(w)
 		}
-
-		// ReadFile must resolve paths strictly inside the fake filesystem.
 		output = s.fileSystem.ReadFile(target, s.remoteIP)
 
 	case "ps":
@@ -382,27 +372,20 @@ func (s *ShellSession) handleCommand(cmd string, w terminalWriter) bool {
 
 	case "sudo", "su":
 		s.triggerShockBanner(w)
-		output = fmt.Sprintf(
-			"sudo: access denied by simulated security policy; event recorded for %s\r\n",
-			s.remoteIP,
-		)
+		output = fmt.Sprintf("sudo: access denied; event recorded for %s\r\n", s.remoteIP)
 
 	case "clear":
 		output = "\033[H\033[2J"
 
 	case "help":
-		output = "Simulated shell commands:\r\n" +
-			"  whoami id pwd uname hostname ls cd cat\r\n" +
-			"  ps top history clear help exit\r\n"
+		output = "Available commands: whoami id pwd uname hostname ls cd cat ps top history clear help exit\r\n"
 
 	case "exit", "quit":
-		output = "\r\n[!] CONNECTION TERMINATION REQUESTED.\r\n" +
-			"[*] Closing simulated session...\r\n"
-		_ = s.write(w, output)
+		_ = s.write(w, "logout\r\n")
 		return true
 
 	case "rm":
-		output = "rm: operation denied (simulated read-only filesystem)\r\n"
+		output = fmt.Sprintf("%s: operation denied (simulated read-only filesystem)\r\n", command)
 
 	case "reboot", "shutdown":
 		output = "Operation denied by simulated containment policy.\r\n"
@@ -414,6 +397,42 @@ func (s *ShellSession) handleCommand(cmd string, w terminalWriter) bool {
 	if output != "" {
 		_, _ = w.FastWrite([]byte(output))
 	}
-
 	return false
+}
+
+// listDirectory provides a Linux-like display for the simulated /root directory.
+// Long-format entries are illustrative honeypot metadata, not host filesystem data.
+func (s *ShellSession) listDirectory(args []string) string {
+	longFormat := false
+	showAll := false
+
+	for _, arg := range args {
+		if !strings.HasPrefix(arg, "-") {
+			continue
+		}
+		for _, option := range strings.TrimPrefix(arg, "-") {
+			switch option {
+			case 'l':
+				longFormat = true
+			case 'a':
+				showAll = true
+		}
+		}
+	}
+
+	if longFormat && showAll && s.fileSystem.CurrentPath == "/root" {
+		return "total 28\r\n" +
+			"drwx------  5 root root 4096 Oct  8 20:10 .\r\n" +
+			"drwxr-xr-x  3 root root 4096 Oct  8 18:00 ..\r\n" +
+			"-rw-------  1 root root  220 Oct  8 18:02 .bash_history\r\n" +
+			"drwx------  2 root root 4096 Oct  8 18:05 .ssh\r\n" +
+			"-r--------  1 root root 1820 Oct  8 19:12 database_production.conf\r\n" +
+			"-rw-------  1 root root  348 Oct  8 20:00 emergency_access.txt\r\n" +
+			"drwxr-x---  3 root root 4096 Oct  8 20:14 secrets_vault\r\n"
+	}
+
+	if longFormat {
+		return s.fileSystem.ListDirectory()
+	}
+	return s.fileSystem.ListDirectory()
 }
