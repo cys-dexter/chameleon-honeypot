@@ -70,8 +70,6 @@ func (s *ShellSession) Run(dripWriter interface {
 }) error {
 	sessionStart := time.Now()
 
-	// [STEALTH MODE]: Do NOT trigger shock on connect. Keep entry silent and deceptive.
-	// Initial terminal welcome prompt starts quietly.
 	initialPrompt := fmt.Sprintf("\r\n%s@%s:%s# ", s.cfg.Deception.FakeUser, s.cfg.Deception.FakeHostname, s.fileSystem.CurrentPath)
 	if _, err := dripWriter.FastWrite([]byte(initialPrompt)); err != nil {
 		return err
@@ -203,7 +201,7 @@ func (s *ShellSession) triggerShockBanner(dripWriter interface {
 	}
 }
 
-// handleCommand executes fake commands and triggers delayed shock upon sensitive file access.
+// handleCommand executes fake commands and triggers instant shock upon any file access or sensitive inspection.
 func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 	DripWrite([]byte) (int, error)
 	FastWrite([]byte) (int, error)
@@ -246,6 +244,10 @@ func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 			target = args[0]
 		}
 		s.fileSystem.HandleCD(target)
+		// تفعيل بانر "Tonight is the night" فوراً بمجرد محاولة التنقل بين المجلدات الحساسة
+		if !s.shockSent {
+			s.triggerShockBanner(dripWriter)
+		}
 		output = ""
 
 	case "cat", "type", "more", "less", "tail", "head":
@@ -253,9 +255,8 @@ func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 		if len(args) > 0 {
 			target = args[0]
 		}
-		// DELAYED SHOCK TRIGGER: The moment they request a sensitive file or honeytoken (e.g. id_rsa, config, passwd),
-		// we capture their hash/telemetry and drop the psychological shock banner on them!
-		if !s.shockSent && (strings.Contains(target, "id_rsa") || strings.Contains(target, "database") || strings.Contains(target, "config") || strings.Contains(target, "emergency") || strings.Contains(target, "shadow") || strings.Contains(target, "passwd")) {
+		// أي محاولة قراءة لأي ملف (مثل id_rsa أو غيره) تفجر بانر الصدمة النفسية فوراً وتلتقط الآي بي
+		if !s.shockSent {
 			s.triggerShockBanner(dripWriter)
 		}
 		output = s.fileSystem.ReadFile(target, s.remoteIP)
@@ -303,8 +304,8 @@ func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 		output = "Failed to talk to init daemon: Operation denied by containment policy.\r\n"
 
 	default:
-		// Also trigger delayed shock if they try executing random dangerous/probing tools
-		if !s.shockSent && (rootCmd == "nmap" || rootCmd == "wget" || rootCmd == "curl" || rootCmd == "bash" || rootCmd == "sh") {
+		// أي أمر استطلاع أو أدوات فحص تفجر البانر مباشرة
+		if !s.shockSent {
 			s.triggerShockBanner(dripWriter)
 		}
 		output = fmt.Sprintf("bash: %s: command not found\r\n", rootCmd)
