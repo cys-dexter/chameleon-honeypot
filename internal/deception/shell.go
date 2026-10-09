@@ -53,7 +53,7 @@ func NewShellSession(
 	}
 }
 
-// Run executes the interactive loop, interpreting keystrokes and ensuring instant snappy responses.
+// Run executes the interactive loop.
 func Run(s *ShellSession, dripWriter interface {
 	DripWrite([]byte) (int, error)
 	FastWrite([]byte) (int, error)
@@ -62,7 +62,7 @@ func Run(s *ShellSession, dripWriter interface {
 	return nil
 }
 
-// Run executes the interactive loop with instant FastWrite responsiveness.
+// Run executes the interactive loop with clean, bug-free prompt handling.
 func (s *ShellSession) Run(dripWriter interface {
 	DripWrite([]byte) (int, error)
 	FastWrite([]byte) (int, error)
@@ -93,6 +93,7 @@ func (s *ShellSession) Run(dripWriter interface {
 			s.logger.LogSessionKeystroke(s.sessionID, b, offset)
 		}
 
+		// Handle Enter key (CR or LF)
 		if b == '\r' || b == '\n' {
 			_, _ = dripWriter.FastWrite([]byte("\r\n"))
 
@@ -136,6 +137,7 @@ func (s *ShellSession) Run(dripWriter interface {
 			continue
 		}
 
+		// Handle Backspace (Ctrl+H or DEL)
 		if b == 0x08 || b == 0x7F {
 			lineStr := currentLine.String()
 			if len(lineStr) > 0 {
@@ -146,6 +148,7 @@ func (s *ShellSession) Run(dripWriter interface {
 			continue
 		}
 
+		// Handle Ctrl+C
 		if b == 0x03 {
 			currentLine.Reset()
 			_, _ = dripWriter.FastWrite([]byte("^C\r\n"))
@@ -154,6 +157,7 @@ func (s *ShellSession) Run(dripWriter interface {
 			continue
 		}
 
+		// Handle Ctrl+D (EOF / Exit)
 		if b == 0x04 {
 			if currentLine.Len() == 0 {
 				_, _ = dripWriter.FastWrite([]byte("exit\r\n"))
@@ -162,6 +166,7 @@ func (s *ShellSession) Run(dripWriter interface {
 			continue
 		}
 
+		// Normal printable characters
 		if b >= 32 && b <= 126 {
 			currentLine.WriteByte(b)
 			_, _ = dripWriter.FastWrite([]byte{b})
@@ -169,7 +174,7 @@ func (s *ShellSession) Run(dripWriter interface {
 	}
 }
 
-// triggerShockBanner prints the psychological shock warning banner instantly using FastWrite.
+// triggerShockBanner prints the psychological shock warning banner instantly.
 func (s *ShellSession) triggerShockBanner(dripWriter interface {
 	DripWrite([]byte) (int, error)
 	FastWrite([]byte) (int, error)
@@ -180,12 +185,9 @@ func (s *ShellSession) triggerShockBanner(dripWriter interface {
 	}
 	s.shockSent = true
 
-	// === [LIVE SOC TERMINAL 1: SHOCK TRIGGER ALERT] ===
 	fmt.Printf("\033[31m[💥 PSYCHOLOGICAL SHOCK TRIGGERED] Attacker %s tripped the deception trap!\033[0m\n", s.remoteIP)
 
 	banner := GenerateShockWarning(s.remoteIP, s.remotePort, s.protocol, s.cfg.Deception.GlitchEffect)
-
-	// استخدام FastWrite لطباعة البانر فوراً وبدون أي تقطيع أو تأخير
 	_, _ = dripWriter.FastWrite([]byte(banner))
 
 	if s.logger != nil {
@@ -202,7 +204,7 @@ func (s *ShellSession) triggerShockBanner(dripWriter interface {
 	}
 }
 
-// handleCommand executes commands instantly with FastWrite and triggers shock on interaction.
+// handleCommand executes commands instantly without output duplication.
 func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 	DripWrite([]byte) (int, error)
 	FastWrite([]byte) (int, error)
@@ -252,7 +254,6 @@ func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 		if len(args) > 0 {
 			target = args[0]
 		}
-		// تفعيل بانر الصدمة الفوري عند محاولة قراءة أي ملف
 		if !s.shockSent {
 			s.triggerShockBanner(dripWriter)
 		}
@@ -300,7 +301,6 @@ func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 		output = "Failed to talk to init daemon: Operation denied by containment policy.\r\n"
 
 	default:
-		// أي أمر غير معروف أو محاولة استطلاع تفجر البانر فوراً
 		if !s.shockSent {
 			s.triggerShockBanner(dripWriter)
 		}
@@ -308,7 +308,6 @@ func (s *ShellSession) handleCommand(cmd string, dripWriter interface {
 	}
 
 	if output != "" {
-		// استخدام FastWrite لإرسال كامل الناتج دفعة واحدة وبسرعة فائقة بدون تقطيع
 		_, _ = dripWriter.FastWrite([]byte(output))
 	}
 
